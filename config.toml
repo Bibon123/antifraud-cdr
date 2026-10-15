@@ -1,0 +1,124 @@
+# Все пороги детекторов, скоринга и политики в одном месте.
+# Значения подобраны по разведке данных; устойчивость проверяется в antifraud/evaluate.py.
+
+[data.operator_codes]
+"842" = "CITY"
+"499" = "CITY"
+"892" = "CITY"
+"025" = "ALFA"
+"026" = "ALFA"
+"027" = "ALFA"
+"899" = "BARB"
+"810" = "BARB"
+"834" = "BARB"
+"210" = "BELL"
+"214" = "BELL"
+"200" = "BELL"
+
+[data]
+period_start = "2026-09-30"        # допустимое окно дат (с запасом)
+period_end = "2026-10-07"
+max_duration_sec = 86400           # длительность больше суток считаем битой (пусто)
+imsi_length = 15
+
+[s1_wangiri]
+min_calls = 200
+min_short_share = 0.9              # доля вызовов 0–2 с
+short_sec = 2
+min_unique_share = 0.95
+max_span_min = 360
+
+[s2_robot]
+min_calls = 100
+min_seq_share = 0.8                # доля соседних вызовов на B±1..max_step
+max_step = 3
+max_span_min = 240
+
+[s3_simbox]
+min_calls = 40                     # проверено на синтетике: «тихие» SIM-боксы делают 50–100 вызовов
+max_incoming = 2                   # единичные входящие бывают случайными (робот попал в номер, звонок самому себе)
+min_unique_share = 0.98
+min_active_hours = 8
+max_long_share = 0.5
+
+[s4_clone]
+min_imsi = 3
+
+[s5_chains]
+link_tolerance_sec = 5
+min_chains = 3
+
+[s6_carousel]
+pair_min_calls = 4
+min_group = 4
+max_group = 12
+min_closure = 0.98
+min_hours = 12
+dur_min = 8
+dur_max = 45
+
+[s7_vishing]
+long_min_sec = 400
+long_max_sec = 7200                # верхний предел только от явного мусора
+min_long_share = 0.8
+min_calls = 5
+max_incoming = 2
+prelude_window_min = 360
+min_avg_prelude_numbers = 1.5
+spoof_min_hit_share = 0.8
+
+[scoring]
+mark_threshold = 50                # пометить абоненту
+review_threshold = 80              # + аналитику, ограничения
+strong_threshold = 95              # кандидат на автоблокировку
+autoblock_min_factors = 2          # независимых факторов >= factor_min_points
+factor_min_points = 15
+
+[ml]
+enabled = true
+seed = 42
+background_sample = 80000
+iterations = 300
+folds = 5
+review_min_prob = 0.9              # номер уходит аналитику, если модель уверена, а правила молчат
+review_min_activity = 10
+
+[ml_synth]
+# CatBoost на размеченной синтетике (без ответов правил) — независимая проверка на реальных CDR
+enabled = true
+seed = 42
+iterations = 300
+train_sets = 6                     # наборов синтетики с разными параметрами (тише/громче, короче/длиннее)
+train_seed = 1000                  # зёрна обучения не пересекаются с отложенными сценариями (7, 101, 202)
+synth_normal_sample = 30000
+real_background_sample = 60000     # случайные реальные номера как «обычные» (вариант «синтетика + реальный фон»)
+threshold = 0.5                    # вероятность схемы, с которой модель считает номер мошенническим
+threshold_high = 0.8
+review_min_prob = 0.8              # номер вне ответа правил уходит аналитику
+review_min_activity = 10
+
+[economics]
+# Тарифы для оценки ущерба. ЗАМЕНИТЬ на тарифы оператора; здесь — допущения и публичные ориентиры.
+premium_rub_per_min = 100
+premium_note = "допущение: минута перезвона на международный платный номер"
+termination_gap_rub_per_min = 14
+termination_note = "ориентир ComNews (2021): ~15 ₽/мин за входящий международный против ~0,95 ₽/мин местной терминации"
+retail_rub_per_min = 3
+retail_note = "допущение: розничная минута абонента"
+interconnect_rub_per_min = 0.95
+interconnect_note = "ориентир ComNews (2021): местная терминация на мобильную сеть ~0,95 ₽/мин"
+vishing_success_share = 0.05
+avg_theft_rub = 23000
+vishing_note = "Банк России, 2024: 27,5 млрд ₽ за 1,2 млн операций без согласия ≈ 23 тыс. ₽ на операцию; доля успешных звонков 5% — допущение"
+
+[database]
+# Пусто — SQLite-файл out/antifraud.db (ничего ставить не нужно).
+# PostgreSQL: url = "postgresql+psycopg://postgres:ПАРОЛЬ@localhost:5432/antifraud" (база создастся сама).
+# Переменная окружения DATABASE_URL важнее этой настройки.
+url = ""
+
+[policy]
+# Номера, которые никогда не блокируются и вызовы на которые всегда проходят (fail-open).
+emergency_numbers = ["112", "101", "102", "103", "104", "01", "02", "03", "04"]
+# Сюда добавляются номера госслужб/банков из реестра оператора (10 цифр).
+social_whitelist = []

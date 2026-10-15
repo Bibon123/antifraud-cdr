@@ -1,0 +1,7 @@
+out/
+__pycache__/
+*.pyc
+.pytest_cache/
+_*.parquet
+*.zip
+cdr_out/

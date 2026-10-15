@@ -1,0 +1,16 @@
+# результаты прогона и данные организатора — в репозиторий не кладём
+out/
+data/
+cdr_out/
+*.zip
+*.cdr
+*.db
+# окружение и служебное
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+catboost_info/
+*.log
+~$*

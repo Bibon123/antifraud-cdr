@@ -1,0 +1,27 @@
+# Боевой вариант: PostgreSQL + пайплайн + веб-консоль.
+#   положите cdr_out.zip в папку data/ и выполните:  docker compose up --build
+#   консоль: http://localhost:8000   база: localhost:5432 (antifraud / antifraud)
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: antifraud
+      POSTGRES_USER: antifraud
+      POSTGRES_PASSWORD: antifraud
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U antifraud -d antifraud"]
+      interval: 3s
+      retries: 20
+  app:
+    build: .
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgresql+psycopg://antifraud:antifraud@db:5432/antifraud
+      SOURCE: /data/cdr_out.zip
+    ports: ["8000:8000"]
+    volumes: ["./data:/data"]
+volumes:
+  pgdata:
